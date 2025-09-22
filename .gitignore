@@ -1,0 +1,26 @@
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Node tools (if you install any CLIs like http-server)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Local config / secrets
+.env
+*.local
+*.secret
+secrets.txt
+
+# Firebase CLI outputs
+firebase-debug.log
+.firebase/
+
+# Editors/IDE
+.vscode/
+.idea/
+
+# Build artifacts (if you ever add one)
+dist/
+build/
