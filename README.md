@@ -39,6 +39,17 @@ firebase.json
 - Implements login/logout, route guard for `board.html`, task modal (create/edit/delete), toasts, accessibility basics.
 - Uses Dev A’s helpers; no second Firebase initialization.
 
+### Dev A API (import from `/public/js/tasks.js`)
+### For Dev B & C
+- Data streams:
+  - `listenColumn(status, cb)` // status: 'todo'|'in_progress'|'done'
+  - `listenAll(cb)`
+- CRUD:
+  - `createTask(data)`, `updateTask(id, updates)`, `deleteTask(id)`
+- Drag & drop:
+  - `computeOrder(prevOrder, nextOrder)`, `moveTask(id, { newStatus, newOrder })`
+- Board title:
+  - `getBoardTitle()`, `setBoardTitle(title)`
 
 \## Notes
 
