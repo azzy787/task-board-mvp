@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Team Board</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="./css/board.css" />
+</head>
+<body class="bg-pink-100 text-gray-800">
+  <!-- Header -->
+  <header class="flex items-center justify-between bg-[#CFFAEA] p-4 rounded-b-2xl shadow-md app-header">
+    <!-- Board title -->
+    <input id="board-title" class="text-2xl font-bold text-black bg-transparent border-b outline-none" value="Team Board" />
+
+    <!-- Search + Filters -->
+    <div class="flex items-center gap-3">
+      <!-- Search -->
+      <input
+        id="search-input"
+        type="text"
+        placeholder="Search tasks..."
+        class="px-3 py-2 rounded-xl border border-[#FFD6E8] focus:outline-none focus:ring-2 focus:ring-[#FF99C8] text-gray-700"
+      />
+
+      <!-- Status filter -->
+      <select
+        id="status-filter"
+        class="px-3 py-2 rounded-xl border border-[#FFD6E8] focus:outline-none focus:ring-2 focus:ring-[#FF99C8] text-gray-700"
+      >
+        <option value="">All Status</option>
+        <option value="todo">To Do</option>
+        <option value="in_progress">In Progress</option>
+        <option value="done">Done</option>
+      </select>
+
+      <!-- Assignee filter -->
+      <input
+        id="assignee-filter"
+        type="text"
+        placeholder="Filter by assignee..."
+        class="px-3 py-2 rounded-xl border border-[#FFD6E8] focus:outline-none focus:ring-2 focus:ring-[#FF99C8] text-gray-700"
+      />
+    </div>
+
+    <!-- Buttons -->
+    <div class="flex items-center gap-2 header-actions">
+      <button
+        id="new-task-btn"
+        class="bg-[#FF6FAE] hover:bg-[#FF99C8] text-white font-semibold px-4 py-2 rounded-xl shadow-md transition btn btn-primary"
+      >
+        + New Task
+      </button>
+      <button
+        id="seed-btn"
+        class="bg-white hover:bg-gray-100 text-[#7EE787] font-semibold px-4 py-2 rounded-xl shadow-md transition btn btn-ghost"
+        title="Add sample tasks"
+      >
+        Seed
+      </button>
+      <button
+        id="logout-btn"
+        class="bg-white hover:bg-gray-100 text-[#7EE787] font-semibold px-4 py-2 rounded-xl shadow-md transition btn btn-ghost"
+      >
+        Logout
+      </button>
+    </div>
+  </header>
+
+  <!-- Board -->
+  <main class="p-4">
+    <div id="board-columns" class="flex gap-4 justify-between">
+      <!-- To Do -->
+      <div id="col-todo" class="column w-1/3">
+        <div class="bg-white rounded-2xl shadow p-3 h-full">
+          <h2 class="font-semibold text-emerald-500 mb-2">To Do (<span id="count-todo">0</span>)</h2>
+          <div id="todo" class="space-y-3"></div>
+        </div>
+      </div>
+
+      <!-- In Progress -->
+      <div id="col-in_progress" class="column w-1/3">
+        <div class="bg-white rounded-2xl shadow p-3 h-full">
+          <h2 ...>In Progress (<span id="count-in_progress">0</span>)</h2>
+          <div id="in_progress" class="space-y-3"></div>
+        </div>
+      </div>
+
+      <!-- Done -->
+      <div id="col-done" class="column w-1/3">
+        <div class="bg-white rounded-2xl shadow p-3 h-full">
+          <h2 class="font-semibold text-emerald-400 mb-2">Done (<span id="count-done">0</span>)</h2>
+          <div id="done" class="space-y-3"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <!-- New Task Modal -->
+  <div
+    id="task-modal"
+    class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+  >
+    <div class="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md">
+      <!-- Modal Header -->
+      <div class="flex justify-between items-center mb-4">
+        <h2 id="modal-title" class="text-xl font-bold text-emerald-600">New Task</h2>
+        <button
+          id="close-modal"
+          class="text-gray-500 hover:text-gray-700 text-lg font-bold"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Task Form -->
+      <form id="task-form" class="flex flex-col gap-3">
+        <!-- Title -->
+        <input
+          type="text"
+          id="task-title"
+          placeholder="Task title *"
+          required
+          class="px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#98FF98]"
+        />
+
+        <!-- Description -->
+        <textarea
+          id="task-desc"
+          placeholder="Description (optional)"
+          class="px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#98FF98]"
+        ></textarea>
+
+        <!-- Assignee -->
+        <input
+          type="text"
+          id="task-assignee"
+          placeholder="Assignee"
+          class="px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#98FF98]"
+        />
+
+        <!-- Due Date -->
+        <input
+          type="date"
+          id="task-due"
+          class="px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#98FF98]"
+        />
+
+        <!-- Priority -->
+        <select
+          id="task-priority"
+          class="px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#98FF98]"
+        >
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+
+        <!-- Buttons -->
+        <div class="flex justify-end space-x-2 mt-4">
+          <button type="button" id="delete-task" class="hidden bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">Delete</button>
+          <button type="button" id="cancel-task" class="bg-gray-200 px-4 py-2 rounded-lg">Cancel</button>
+          <button type="submit" class="bg-[#98FF98] text-white px-4 py-2 rounded-lg hover:bg-[#7EE787]">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="./js/board.js"></script>
+</body>
+</html>
+

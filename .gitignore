@@ -12,6 +12,7 @@ yarn-error.log*
 *.local
 *.secret
 secrets.txt
+.code-workspace
 
 # Firebase CLI outputs
 firebase-debug.log
