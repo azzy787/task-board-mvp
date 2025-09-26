@@ -11,7 +11,10 @@
   <!-- Header -->
   <header class="flex items-center justify-between bg-[#CFFAEA] p-4 rounded-b-2xl shadow-md app-header">
     <!-- Board title -->
-    <input id="board-title" class="text-2xl font-bold text-black bg-transparent border-b outline-none" value="Team Board" />
+    <div class="flex items-center gap-2">
+      <input id="board-title" class="text-2xl font-bold text-black bg-transparent outline-none" value="Team Board" readonly />
+      <button id="edit-title-btn" class="px-3 py-1 text-sm rounded-lg border bg-white hover:bg-gray-100 shadow-sm">Edit</button>
+    </div>
 
     <!-- Search + Filters -->
     <div class="flex items-center gap-3">
@@ -53,14 +56,14 @@
       </button>
       <button
         id="seed-btn"
-        class="bg-white hover:bg-gray-100 text-[#7EE787] font-semibold px-4 py-2 rounded-xl shadow-md transition btn btn-ghost"
+        class="bg-white text-[#7EE787] border border-[#7EE787] hover:bg-[#EAFBF1] font-semibold px-4 py-2 rounded-xl shadow-md transition btn"
         title="Add sample tasks"
       >
         Seed
       </button>
       <button
         id="logout-btn"
-        class="bg-white hover:bg-gray-100 text-[#7EE787] font-semibold px-4 py-2 rounded-xl shadow-md transition btn btn-ghost"
+        class="bg-black hover:bg-gray-900 text-white font-semibold px-4 py-2 rounded-xl shadow-md transition btn"
       >
         Logout
       </button>
@@ -73,7 +76,7 @@
       <!-- To Do -->
       <div id="col-todo" class="column w-1/3">
         <div class="bg-white rounded-2xl shadow p-3 h-full">
-          <h2 class="font-semibold text-emerald-500 mb-2">To Do (<span id="count-todo">0</span>)</h2>
+          <h2 class="font-semibold text-rose-500 mb-2">To Do (<span id="count-todo">0</span>)</h2>
           <div id="todo" class="space-y-3"></div>
         </div>
       </div>
@@ -81,7 +84,7 @@
       <!-- In Progress -->
       <div id="col-in_progress" class="column w-1/3">
         <div class="bg-white rounded-2xl shadow p-3 h-full">
-          <h2 ...>In Progress (<span id="count-in_progress">0</span>)</h2>
+          <h2 class="font-semibold text-amber-500 mb-2">In Progress (<span id="count-in_progress">0</span>)</h2>
           <div id="in_progress" class="space-y-3"></div>
         </div>
       </div>
@@ -89,7 +92,7 @@
       <!-- Done -->
       <div id="col-done" class="column w-1/3">
         <div class="bg-white rounded-2xl shadow p-3 h-full">
-          <h2 class="font-semibold text-emerald-400 mb-2">Done (<span id="count-done">0</span>)</h2>
+          <h2 class="font-semibold text-emerald-600 mb-2">Done (<span id="count-done">0</span>)</h2>
           <div id="done" class="space-y-3"></div>
         </div>
       </div>

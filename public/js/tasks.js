@@ -2,7 +2,7 @@
 import { db } from "./firebase.js";
 import {
   collection, doc, addDoc, setDoc, getDoc, updateDoc, deleteDoc,
-  query, where, orderBy, onSnapshot,
+  query, where, orderBy, onSnapshot, getDocs, writeBatch,
   serverTimestamp, increment
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -46,6 +46,16 @@ export async function deleteTask(id) {
   await deleteDoc(doc(db, "tasks", id));
 }
 
+export async function deleteTasks(ids = []) {
+  const list = Array.from(new Set(ids.filter(Boolean)));
+  if (list.length === 0) return;
+  const batch = writeBatch(db);
+  for (const id of list) {
+    batch.delete(doc(db, "tasks", id));
+  }
+  await batch.commit();
+}
+
 
 export function listenColumn(status, callback) {
   const q = query(TASKS, where("status", "==", status), orderBy("order", "asc"));
@@ -85,6 +95,20 @@ export function computeOrder(prevOrder, nextOrder) {
   }
   // single item in column
   return Date.now();
+}
+
+// ---------- Queries for seeding de-duplication ----------
+export async function getTasksByTitles(titles = []) {
+  const unique = Array.from(new Set((titles || []).filter(Boolean)));
+  if (unique.length === 0) return [];
+  // Firestore 'in' supports up to 10 values; our seed set is small.
+  const batches = [];
+  for (let i = 0; i < unique.length; i += 10) {
+    const chunk = unique.slice(i, i + 10);
+    batches.push(getDocs(query(TASKS, where("title", "in", chunk))));
+  }
+  const snaps = await Promise.all(batches);
+  return snaps.flatMap((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() })));
 }
 
 // ---------- Board title meta ----------
