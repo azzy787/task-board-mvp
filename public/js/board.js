@@ -2,7 +2,7 @@
 "use strict";
 
 import { ensureAuthed, wireLogout } from "./auth.js";
-import { listenAll, createTask, getBoardTitle, setBoardTitle } from "./tasks.js";
+import { listenAll, createTask, getBoardTitle, setBoardTitle, getTasksByTitles, deleteTasks } from "./tasks.js";
 import { openTaskModal } from "./ui.js";
 import { enableDragAndDrop } from "./dnd.js";
 
@@ -10,27 +10,92 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------------- Board title: load + persist ----------------
   (async () => {
     const titleEl = document.getElementById("board-title");
-    if (!titleEl) return;
+    const editBtn = document.getElementById("edit-title-btn");
+    if (!titleEl || !editBtn) return;
+
+    // load saved title
     try {
       const saved = await getBoardTitle();
-      // only set from DB if empty/default to avoid overwriting designer text
-      if (
-        (titleEl.value ?? titleEl.textContent).trim() === "" ||
-        titleEl.value === "Team Board" ||
-        titleEl.textContent === "Team Board"
-      ) {
-        if ("value" in titleEl) titleEl.value = saved;
-        else titleEl.textContent = saved;
+      const current = (titleEl.value ?? titleEl.textContent ?? "").trim();
+      if (!current || current === "Team Board") {
+        if ("value" in titleEl) titleEl.value = saved || "Team Board";
+        else titleEl.textContent = saved || "Team Board";
       }
     } catch {}
-    let tmr;
-    const getVal = () =>
-      ("value" in titleEl ? titleEl.value : titleEl.textContent).trim();
-    const handler = () => {
-      clearTimeout(tmr);
-      tmr = setTimeout(() => setBoardTitle(getVal()), 400);
+
+    // UI helpers
+    const setReadonly = (ro) => {
+      if (ro) {
+        titleEl.setAttribute("readonly", "true");
+        titleEl.setAttribute("tabindex", "-1");
+        titleEl.style.pointerEvents = "none"; // not clickable
+        titleEl.classList.add("cursor-default", "select-none");
+        titleEl.classList.remove("border-b", "border-gray-300");
+      } else {
+        titleEl.removeAttribute("readonly");
+        titleEl.removeAttribute("tabindex");
+        titleEl.style.pointerEvents = "auto";
+        titleEl.classList.remove("cursor-default", "select-none");
+        titleEl.classList.add("border-b", "border-gray-300");
+      }
     };
-    titleEl.addEventListener("input", handler);
+
+    let originalValue = titleEl.value;
+    let editing = false;
+
+    function enterEditMode() {
+      editing = true;
+      originalValue = titleEl.value;
+      setReadonly(false);
+      editBtn.textContent = "Save";
+      editBtn.classList.add("bg-[#FF99C8]", "text-white");
+      // focus & place cursor at end
+      titleEl.focus();
+      try {
+        const v = titleEl.value;
+        titleEl.value = "";
+        titleEl.value = v;
+      } catch {}
+    }
+
+    async function exitEditMode({ save }) {
+      try {
+        if (save) {
+          const newVal = (titleEl.value || "").trim() || "Team Board";
+          await setBoardTitle(newVal);
+          titleEl.value = newVal;
+        } else {
+          // revert
+          titleEl.value = originalValue;
+        }
+      } finally {
+        editing = false;
+        setReadonly(true);
+        editBtn.textContent = "Edit";
+        editBtn.classList.remove("bg-[#FF99C8]", "text-white");
+      }
+    }
+
+    // initial state
+    setReadonly(true);
+
+    // Button toggles between Edit and Save
+    editBtn.addEventListener("click", async () => {
+      if (!editing) return enterEditMode();
+      await exitEditMode({ save: true });
+    });
+
+    // Keyboard shortcuts while editing
+    titleEl.addEventListener("keydown", async (e) => {
+      if (!editing) return;
+      if (e.key === "Enter") {
+        e.preventDefault();
+        await exitEditMode({ save: true });
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        await exitEditMode({ save: false });
+      }
+    });
   })();
 
   // ---------------- Column handles ----------------
@@ -54,6 +119,39 @@ document.addEventListener("DOMContentLoaded", () => {
     done: firstPresent(altIds.done),
   };
 
+  // ---------------- Selection state (multi-delete) ----------------
+  let selectionMode = false;
+  const selectedIds = new Set();
+  let lastItems = [];
+
+  const selectBtn = document.getElementById("select-mode-btn");
+  const deleteSelectedBtn = document.getElementById("delete-selected-btn");
+
+  function updateDeleteSelectedState() {
+    if (!deleteSelectedBtn) return;
+    const count = selectedIds.size;
+    deleteSelectedBtn.disabled = count === 0;
+    deleteSelectedBtn.textContent = count > 0 ? `Delete Selected (${count})` : "Delete Selected";
+  }
+
+  function setSelectionMode(on) {
+    selectionMode = !!on;
+    if (!selectionMode) selectedIds.clear();
+    // re-render to show/hide checkboxes
+    if (lastItems.length) render(lastItems);
+    // update Select button styling/text
+    if (selectBtn) {
+      if (selectionMode) {
+        selectBtn.textContent = "Cancel Selection";
+        selectBtn.classList.add("bg-gray-800", "text-white");
+      } else {
+        selectBtn.textContent = "Select";
+        selectBtn.classList.remove("bg-gray-800", "text-white");
+      }
+    }
+    updateDeleteSelectedState();
+  }
+
   // ---------------- Card renderer ----------------
   function createCard(task) {
     const card = document.createElement("div");
@@ -63,6 +161,21 @@ document.addEventListener("DOMContentLoaded", () => {
     card.dataset.status = task.status;
     if (typeof task.order !== "undefined") card.dataset.order = String(task.order);
     card.draggable = true;
+
+    // Selection checkbox (only in selection mode)
+    let checkbox = null;
+    if (selectionMode) {
+      checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "mr-2 align-middle";
+      checkbox.checked = selectedIds.has(task.id);
+      checkbox.addEventListener("click", (e) => e.stopPropagation());
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) selectedIds.add(task.id);
+        else selectedIds.delete(task.id);
+        updateDeleteSelectedState();
+      });
+    }
 
     const title = document.createElement("h3");
     title.className = "task-title font-bold";
@@ -86,7 +199,12 @@ document.addEventListener("DOMContentLoaded", () => {
     priorityP.textContent =
       pr === "high" ? "High Priority" : pr === "low" ? "Low Priority" : "Medium Priority";
 
-    card.appendChild(title);
+    const titleRow = document.createElement("div");
+    titleRow.className = "flex items-start";
+    if (checkbox) titleRow.appendChild(checkbox);
+    titleRow.appendChild(title);
+
+    card.appendChild(titleRow);
     card.appendChild(assigneeLine);
     card.appendChild(dueLine);
     card.appendChild(assigneeNode);
@@ -94,6 +212,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Open modal on card click (edit mode)
     card.addEventListener("click", () => {
+      if (selectionMode) {
+        // Toggle selection
+        if (checkbox) {
+          checkbox.checked = !checkbox.checked;
+          checkbox.dispatchEvent(new Event("change"));
+        }
+        return;
+      }
       const data = {
         title: task.title,
         description: task.description || "",
@@ -137,6 +263,7 @@ document.addEventListener("DOMContentLoaded", () => {
         order: Number.isFinite(t.order) ? t.order : (i + 1) * 1000,
       }))
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    lastItems = ordered;
     // Render
     for (const task of ordered) {
       const colEl = columns[task.status];
@@ -191,13 +318,49 @@ document.addEventListener("DOMContentLoaded", () => {
           { title: "Set up Firestore Database",    assignee: "Sanchez",  due_date: toDate("2025-09-22"), priority: "high",   status: "done",        order: 1000 },
           { title: "Build Drag & Drop Functionality",assignee: "Angela", due_date: toDate("2025-09-24"), priority: "high",   status: "done",        order: 2000 },
         ];
-        for (const t of samples) await createTask(t);
-        alert("Seeded sample tasks.");
+        // Fetch existing tasks that have the same titles as samples
+        const existing = await getTasksByTitles(samples.map((s) => s.title));
+        const key = (t) => `${t.title}:::${(t.assignee || "").toLowerCase()}:::${t.status}`;
+        const existingKeys = new Set(existing.map(key));
+        let created = 0;
+        for (const t of samples) {
+          const k = key(t);
+          if (existingKeys.has(k)) continue; // skip duplicates
+          await createTask(t);
+          existingKeys.add(k);
+          created += 1;
+        }
+        if (created === 0) {
+          alert("No tasks added. Seed items already exist.");
+        } else {
+          alert(`Seeded ${created} sample task(s).`);
+        }
       } catch (err) {
         console.error("Seeding failed", err);
         alert("Failed to seed tasks. Check console.");
       } finally {
         seedBtn.disabled = false;
+      }
+    });
+  }
+
+  // Selection buttons wiring
+  if (selectBtn) {
+    selectBtn.addEventListener("click", () => setSelectionMode(!selectionMode));
+  }
+  if (deleteSelectedBtn) {
+    deleteSelectedBtn.addEventListener("click", async () => {
+      if (selectedIds.size === 0) return;
+      if (!confirm(`Delete ${selectedIds.size} selected task(s)?`)) return;
+      try {
+        deleteSelectedBtn.disabled = true;
+        await deleteTasks(Array.from(selectedIds));
+        setSelectionMode(false);
+      } catch (e) {
+        console.error("Batch delete failed", e);
+        alert("Failed to delete selected tasks");
+      } finally {
+        deleteSelectedBtn.disabled = false;
       }
     });
   }
