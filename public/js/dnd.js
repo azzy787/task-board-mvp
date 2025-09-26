@@ -33,6 +33,9 @@ export function enableDragAndDrop({ altIds, onCountsChange } = {}) {
       const columnEl = document.getElementById(id);
       if (!columnEl) return;
 
+      // Make empty columns easier to hit
+      columnEl.style.minHeight = columnEl.style.minHeight || "40px";
+
       columnEl.addEventListener("dragover", (e) => {
         e.preventDefault();
         columnEl.classList.add("drag-over");
@@ -58,27 +61,39 @@ export function enableDragAndDrop({ altIds, onCountsChange } = {}) {
         const prevStatus = card.dataset.status;
         const newStatus = statusKey;
 
-        // Optimistic DOM placement at the drop position
+        // Determine neighbors BEFORE inserting (card still has .dragging)
         const afterElement = getDragAfterElement(columnEl, e.clientY);
+
+        // next = the element we’re dropping before (if any)
+        const nextOrder = numberOrUndef(afterElement?.dataset?.order);
+
+        // prev = the last draggable BEFORE `afterElement` (or the last child if afterElement is null)
+        let prevOrder;
+        if (afterElement) {
+          // previous draggable sibling of afterElement (skip any 'dragging' item)
+          const prev = previousDraggableSibling(afterElement);
+          prevOrder = numberOrUndef(prev?.dataset?.order);
+        } else {
+          // dropping to the end: take the last non-dragging child
+          const last = lastNonDraggingDraggable(columnEl);
+          prevOrder = numberOrUndef(last?.dataset?.order);
+        }
+
+        const newOrder = computeOrder(prevOrder, nextOrder);
+
+        // Now insert optimistically in the DOM
         if (afterElement == null) columnEl.appendChild(card);
         else columnEl.insertBefore(card, afterElement);
 
-        // Figure out neighbors to compute a stable fractional order
-        const siblings = Array.from(columnEl.querySelectorAll("div[draggable]"));
-        const index = siblings.indexOf(card);
-        const prevOrder = index > 0 ? numberOrUndef(siblings[index - 1].dataset.order) : undefined;
-        const nextOrder = index < siblings.length - 1 ? numberOrUndef(siblings[index + 1].dataset.order) : undefined;
-        const newOrder = computeOrder(prevOrder, nextOrder);
-
         try {
-          // Persist using Dev-A helper (also updates status)
+          // Persist (updates status + order)
           await moveTask(taskId, { newStatus, newOrder });
           card.dataset.status = newStatus;
           card.dataset.order = String(newOrder);
         } catch (err) {
           console.error("Failed to move task:", err);
           alert("Failed to move task, try again.");
-          // Revert DOM if Firestore write failed
+          // Revert DOM on failure
           const prevColEl = firstPresent(map[prevStatus] || [prevStatus]);
           if (prevColEl) prevColEl.appendChild(card);
         } finally {
@@ -96,11 +111,31 @@ export function enableDragAndDrop({ altIds, onCountsChange } = {}) {
     return Number.isFinite(n) ? n : undefined;
   }
 
+  function previousDraggableSibling(el) {
+    let p = el.previousElementSibling;
+    while (p) {
+      if (p.matches?.("div[draggable]") && !p.classList.contains("dragging")) return p;
+      p = p.previousElementSibling;
+    }
+    return null;
+  }
+
+  function lastNonDraggingDraggable(container) {
+    const all = [...container.querySelectorAll("div[draggable]")];
+    for (let i = all.length - 1; i >= 0; i--) {
+      const el = all[i];
+      if (!el.classList.contains("dragging")) return el;
+    }
+    return null;
+  }
+
   // Find the element we should insert before, based on pointer Y
   function getDragAfterElement(container, y) {
     const items = [...container.querySelectorAll("div[draggable]")].filter(
       (el) => !el.classList.contains("dragging")
     );
+    if (items.length === 0) return null; // empty column = append
+
     return items.reduce(
       (closest, el) => {
         const box = el.getBoundingClientRect();

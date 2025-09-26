@@ -2,9 +2,19 @@
 "use strict";
 
 import { ensureAuthed, wireLogout } from "./auth.js";
-import { listenAll, createTask, getBoardTitle, setBoardTitle, getTasksByTitles, deleteTasks } from "./tasks.js";
+import {
+  listenAll,
+  createTask,
+  getBoardTitle,
+  setBoardTitle,
+  getTasksByTitles,
+  deleteTasks,
+  updateTask
+} from "./tasks.js";
 import { openTaskModal } from "./ui.js";
 import { enableDragAndDrop } from "./dnd.js";
+import { db } from "./firebase.js";
+
 
 document.addEventListener("DOMContentLoaded", () => {
   // ---------------- Board title: load + persist ----------------
@@ -98,11 +108,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   })();
 
-  // ---------------- Column handles ----------------
+  // ---------------- Column handles (inner lists only for rendering) ----------------
   const altIds = {
-    todo: ["todo", "todo-column"],
-    in_progress: ["in_progress", "in-progress-column"],
-    done: ["done", "done-column"],
+    todo: ["todo"],
+    in_progress: ["in_progress"],
+    done: ["done"],
   };
 
   function firstPresent(ids = []) {
@@ -276,7 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------------- Auth guard + live data ----------------
   (async () => {
     await ensureAuthed(); // redirects to index.html if not signed in
-    wireLogout();        // hooks #logout-btn if present
+    wireLogout(); // hooks #logout-btn if present
 
     // Now it’s safe to subscribe to Firestore and render
     const unsubscribe = listenAll((docs) => {
@@ -302,47 +312,91 @@ document.addEventListener("DOMContentLoaded", () => {
   })();
 
   // ---------------- Seeder (optional) ----------------
-  const seedBtn = document.getElementById("seed-btn");
-  if (seedBtn) {
-    seedBtn.addEventListener("click", async () => {
-      try {
-        if (!confirm("Seed sample tasks to Firestore?")) return;
-        seedBtn.disabled = true;
-        const toDate = (s) => new Date(s);
-        const samples = [
-          { title: "Review Q3 Marketing Strategy", assignee: "Jingyuan", due_date: toDate("2025-10-15"), priority: "high",   status: "todo",        order: 1000 },
-          { title: "Draft User Onboarding Flow",   assignee: "Angela",   due_date: toDate("2025-10-20"), priority: "medium", status: "todo",        order: 2000 },
-          { title: "Research Competitor Pricing",  assignee: "Sanchez",  due_date: toDate("2025-10-25"), priority: "low",    status: "todo",        order: 3000 },
-          { title: "Finalize Team Board UI Design",assignee: "Angela",   due_date: toDate("2025-10-10"), priority: "high",   status: "in_progress", order: 1000 },
-          { title: "Write API Documentation",      assignee: "Jingyuan", due_date: toDate("2025-10-18"), priority: "medium", status: "in_progress", order: 2000 },
-          { title: "Set up Firestore Database",    assignee: "Sanchez",  due_date: toDate("2025-09-22"), priority: "high",   status: "done",        order: 1000 },
-          { title: "Build Drag & Drop Functionality",assignee: "Angela", due_date: toDate("2025-09-24"), priority: "high",   status: "done",        order: 2000 },
-        ];
-        // Fetch existing tasks that have the same titles as samples
-        const existing = await getTasksByTitles(samples.map((s) => s.title));
-        const key = (t) => `${t.title}:::${(t.assignee || "").toLowerCase()}:::${t.status}`;
-        const existingKeys = new Set(existing.map(key));
-        let created = 0;
-        for (const t of samples) {
-          const k = key(t);
-          if (existingKeys.has(k)) continue; // skip duplicates
-          await createTask(t);
-          existingKeys.add(k);
-          created += 1;
+  // ---------------- Refresh (pull + reconcile updates, no creates) ----------------
+const seedBtn = document.getElementById("seed-btn");
+if (seedBtn) {
+  seedBtn.textContent = "Refresh";
+  seedBtn.title = "Pull latest from Firestore and normalize any bad/missing fields";
+
+  seedBtn.addEventListener("click", async () => {
+    try {
+      seedBtn.disabled = true;
+
+      const { getDocs, collection } =
+        await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+
+      // 1) Pull everything from Firestore
+      const snap = await getDocs(collection(db, "tasks"));
+      const docs = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+      // 2) Build minimal patches (no creates)
+      const validStatus = new Set(["todo", "in_progress", "done"]);
+      const validPriority = new Set(["low", "medium", "high"]);
+
+      let updated = 0, unchanged = 0;
+
+      for (const d of docs) {
+        const patch = {};
+
+        // title: ensure non-empty string
+        const title = typeof d.title === "string" ? d.title.trim() : "";
+        if (!title) patch.title = "Untitled";
+
+        // status: coerce/validate
+        const status = typeof d.status === "string" ? d.status : "todo";
+        if (!validStatus.has(status)) patch.status = "todo";
+
+        // priority: coerce/validate
+        const priority = typeof d.priority === "string" ? d.priority.toLowerCase() : "medium";
+        if (!validPriority.has(priority)) patch.priority = "medium";
+
+        // order: ensure number (stable ascending default if missing)
+        if (!Number.isFinite(d.order)) {
+          // if missing, default to Date.now() so it sorts after existing ones
+          patch.order = Date.now();
         }
-        if (created === 0) {
-          alert("No tasks added. Seed items already exist.");
+
+        // due_date: accept Firestore Timestamp or Date or ISO string; normalize to Date
+        // (Firestore JS SDK will convert Date to Timestamp on write)
+        const due = d.due_date ?? d.due ?? null;
+        if (due && !(due instanceof Date) && !due?.toDate) {
+          // If it is an ISO/string/number, normalize to Date
+          const maybe = new Date(due);
+          if (!Number.isNaN(maybe.valueOf())) patch.due_date = maybe;
+        }
+
+        if (Object.keys(patch).length > 0) {
+          await updateTask(d.id, patch);
+          updated++;
         } else {
-          alert(`Seeded ${created} sample task(s).`);
+          unchanged++;
         }
-      } catch (err) {
-        console.error("Seeding failed", err);
-        alert("Failed to seed tasks. Check console.");
-      } finally {
-        seedBtn.disabled = false;
       }
-    });
-  }
+
+      // 3) Re-render current snapshot (read-only items)
+      const items = docs.map((d) => ({
+        id: d.id,
+        title: (typeof d.title === "string" ? d.title.trim() : "Untitled") || "Untitled",
+        description: d.description || "",
+        assignee: d.assignee || "",
+        priority: validPriority.has((d.priority || "medium").toLowerCase())
+          ? d.priority.toLowerCase()
+          : "medium",
+        status: validStatus.has(d.status || "") ? d.status : "todo",
+        due_date: d.due_date || d.due || null,
+        order: Number.isFinite(d.order) ? d.order : Date.now(),
+      }));
+      render(items); // your existing renderer (also refreshes counts via applyFilters)
+
+      alert(`Refresh complete:\n• Updated: ${updated}\n• Unchanged: ${unchanged}`);
+    } catch (err) {
+      console.error("Refresh failed", err);
+      alert("Failed to refresh from Firestore. Check console.");
+    } finally {
+      seedBtn.disabled = false;
+    }
+  });
+}
 
   // Selection buttons wiring
   if (selectBtn) {
@@ -470,11 +524,12 @@ document.addEventListener("DOMContentLoaded", () => {
   applyFilters();
 
   // ---------------- Enable DnD (moved to dnd.js) ----------------
+  // IMPORTANT: include BOTH the inner list and the outer col-* wrapper as drop zones
   enableDragAndDrop({
     altIds: {
-      todo: ["todo"],
-      in_progress: ["in_progress"],
-      done: ["done"],
+      todo: ["todo", "col-todo"],
+      in_progress: ["in_progress", "col-in_progress"],
+      done: ["done", "col-done"],
     },
     onCountsChange: applyFilters, // refresh counts/filters after a drop
   });

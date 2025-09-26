@@ -1,163 +1,155 @@
+
 :root {
-  --background-white: #ffffff;
-  --secondary-pink: #ffd6e8;
-  --mint-100: #cffaea;
-  --mint-200: #b3f3df;
-  --mint-300: #98ff98;
-  --pink-500: #ff6fae;
-  --pink-400: #ff99c8;
-  --ink: #1f2937;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
-  --dur-fast: 120ms;
-  --dur: 220ms;
-}
-/* Board layout */
-.board-container {
-  display: flex;
-  justify-content: space-around;
-  padding: 20px;
-  background-color: #f7f7f7; /* A light, neutral background */
-}
-
-.btn-ghost:hover {
-  background-color: #ffffff !important;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-}
-
-.column {
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 15px;
-  width: 30%; /* Adjust as needed */
-  min-height: 400px; /* A minimum height for drag/drop */
-  transition: background-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
-}
-
-h2 {
-  color: #333;
-  font-size: 1.5rem;
-  margin-bottom: 10px;
-}
-
-.app-header {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  background: linear-gradient(135deg, var(--mint-100), #e7fffb);
-  backdrop-filter: saturate(120%) blur(6px);
-  border-bottom: 1px solid rgba(0,0,0,0.04);
-  box-shadow: 0 6px 24px rgba(0,0,0,0.04);
-  transition: background-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
-}
-
-.app-header #board-title {
-  letter-spacing: 0.2px;
-}
-
-.app-header input,
-.app-header select {
-  box-shadow: 0 1px 0 rgba(0,0,0,0.03) inset;
-  transition: box-shadow var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
-}
-
-/* Remove gray box look for the read-only board title */
-.app-header input#board-title[readonly] {
-  box-shadow: none !important;
-  border: none !important;
-  background-color: transparent !important;
-}
-
-.app-header input:focus,
-.app-header select:focus {
-  box-shadow: 0 0 0 3px rgba(255, 153, 200, 0.35);
-}
-
-.btn {
-  border: 1px solid transparent;
-  transform: translateZ(0);
-  transition: background-color var(--dur) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
-}
-
-.btn:active {
-  transform: translateY(1px);
-}
-
-.btn-primary {
-  background-color: var(--pink-500) !important;
-  border-color: var(--pink-500);
-  color: #fff;
-}
-.btn-primary:hover {
-  background-color: var(--pink-400) !important;
-  border-color: var(--pink-400);
-}
-
-.btn-ghost {
-  background-color: rgba(255,255,255,0.9) !important;
-  color: var(--mint-300) !important;
-}
-.btn-ghost:hover {
-  background-color: #ffffff !important;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-}
-
-/* Task card */
-.task-card {
-  background-color: var(--background-white);
-  border-left: 5px solid var(--secondary-pink); /* colored edge */
-  border-radius: 6px;
-  padding: 10px;
-  margin-bottom: 10px;
-  cursor: grab;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 300ms var(--ease-out), box-shadow 300ms var(--ease-out), background-color var(--dur-fast) var(--ease-out);
-}
-
-.task-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.18);
-}
-
-/* Priority labels */
-.priority {
-  padding: 3px 6px;
-  border-radius: 4px;
-  display: inline-block;
-  font-size: 0.8em;
-}
-
-.priority.high {
-  background-color: #fce4ec; /* Baby pink */
-  color: #ad1457;
-}
-
-/* Optional: add medium and low variants for completeness */
-.priority.medium {
-  background-color: #ffe0f0; /* soft pink */
-  color: #8e3b6f;
-}
-
-.priority.low {
-  background-color: #f0f0f0;
-  color: #555;
-}
-
-/* Priority border colors on the card itself */
-.task-card.priority-high { border-left-color: #e57373; }
-.task-card.priority-medium { border-left-color: #ffb74d; }
-.task-card.priority-low { border-left-color: #81c784; }
-
-/* Drag-over visual feedback for drop targets */
-.column.drag-over {
-  background-color: #f2fffd; /* very subtle mint tint */
-  box-shadow: 0 0 0 2px #98ff98 inset;
-}
-
-/* Respect prefers-reduced-motion */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
+    --background-white: #ffffff;
+    --secondary-pink: #ffd6e8;
+    --mint-100: #cffaea;
+    --mint-200: #b3f3df;
+    --mint-300: #98ff98;
+    --pink-500: #ff6fae;
+    --pink-400: #ff99c8;
+    --ink: #1f2937;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+    --dur-fast: 120ms;
+    --dur: 220ms;
   }
-}
+  
+  /* Board layout */
+  .board-container {
+    display: flex;
+    justify-content: space-around;
+    padding: 20px;
+    background-color: #f7f7f7;
+  }
+  
+  .column {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    width: 30%;
+    min-height: 400px;
+    transition: background-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  }
+  
+  /* Inner drop zones (actual DnD targets) — make them hittable when empty */
+  #todo,
+  #in_progress,
+  #done {
+    min-height: 40px;              /* <- critical for empty-column drops */
+    padding-bottom: 2px;           /* tiny pad so outline isn’t flush */
+  }
+  
+  /* Headings */
+  h2 {
+    color: #333;
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+  }
+  
+  /* Header / inputs */
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: linear-gradient(135deg, var(--mint-100), #e7fffb);
+    backdrop-filter: saturate(120%) blur(6px);
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.04);
+    transition: background-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
+  }
+  
+  .app-header #board-title { letter-spacing: 0.2px; }
+  
+  .app-header input,
+  .app-header select {
+    box-shadow: 0 1px 0 rgba(0,0,0,0.03) inset;
+    transition: box-shadow var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+  }
+  
+  /* Remove gray box look for read-only board title */
+  .app-header input#board-title[readonly] {
+    box-shadow: none !important;
+    border: none !important;
+    background-color: transparent !important;
+  }
+  
+  .app-header input:focus,
+  .app-header select:focus {
+    box-shadow: 0 0 0 3px rgba(255, 153, 200, 0.35);
+  }
+  
+  /* Buttons */
+  .btn {
+    border: 1px solid transparent;
+    transform: translateZ(0);
+    transition: background-color var(--dur) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .btn:active { transform: translateY(1px); }
+  
+  .btn-primary {
+    background-color: var(--pink-500) !important;
+    border-color: var(--pink-500);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background-color: var(--pink-400) !important;
+    border-color: var(--pink-400);
+  }
+  
+  .btn-ghost {
+    background-color: rgba(255,255,255,0.9) !important;
+    color: var(--mint-300) !important;
+  }
+  .btn-ghost:hover {
+    background-color: #ffffff !important;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  }
+  
+  /* Task card */
+  .task-card {
+    background-color: var(--background-white);
+    border-left: 5px solid var(--secondary-pink);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+    cursor: grab;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 300ms var(--ease-out), box-shadow 300ms var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+  }
+  .task-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 16px 28px rgba(0, 0, 0, 0.18);
+  }
+  .task-card.dragging {
+    opacity: 0.6;
+    cursor: grabbing;
+  }
+  
+  /* Priority labels */
+  .priority {
+    padding: 3px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    font-size: 0.8em;
+  }
+  .priority.high   { background-color: #fce4ec; color: #ad1457; }
+  .priority.medium { background-color: #ffe0f0; color: #8e3b6f; }
+  .priority.low    { background-color: #f0f0f0; color: #555; }
+  
+  /* Priority border colors on the card itself */
+  .task-card.priority-high   { border-left-color: #e57373; }
+  .task-card.priority-medium { border-left-color: #ffb74d; }
+  .task-card.priority-low    { border-left-color: #81c784; }
+  
+  /* Drag-over visual feedback for drop targets (works for inner zones and columns) */
+  .drag-over,
+  .column.drag-over {
+    background-color: #f2fffd; /* subtle mint tint */
+    box-shadow: 0 0 0 2px #98ff98 inset;
+  }
+  
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
